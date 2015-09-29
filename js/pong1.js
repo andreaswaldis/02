@@ -4,20 +4,28 @@ var canvas,
     buffer,
     vertexShader,fragmentShader,shaderProgram,
     VSHADER_SOURCE = "attribute vec2 aVertexPosition;"
+        + "attribute vec4 aColor;"
         + "varying vec4 vColor;"
         + "void main() {"
         + "     vec4 position = vec4(aVertexPosition, 0.0, 1.0);"
         + "     gl_Position = position;"
+        + "     vColor = aColor;"
         + "}",
     FSHADER_SOURCE = "precision mediump float;"
         + "varying vec4 vColor;"
-        + "uniform vec4 uColor;"
         + "void main() {"
-        + "     gl_FragColor = uColor;"
+        + "     gl_FragColor = vColor;"
         + "}",
-    colorLocation,
-    vColorLocation
+    aColorLocation,
+    startTime = null,
+    time,
+    deltaY=0;
     ;
+
+var requestAnimationFrame = window.requestAnimationFrame ||
+    window.mozRequestAnimationFrame ||
+    window.webkitRequestAnimationFrame ||
+    window.msRequestAnimationFrame;
 
 function startup() {
     canvas = document.getElementById("gameCanvas");
@@ -28,53 +36,24 @@ function startup() {
     setupBuffer();
     initGL();
 
-    addBuffer([
-        -0.2, 0.4, 0.368, 0.819, 1.0, 1.0,
-        0.3, 0.4, 0.368, 0.819, 1.0, 1.0,
-        -0.2, -0.4, 0.368, 0.819, 1.0, 1.0,
-        0.3, -0.4, 0.368, 0.819, 1.0, 1.0,
-    ]);
-
-    draw([
-        0.368,
-        0.819,
-        1.0,
-        1.0
-    ]);
-
-    addBuffer([
-        -0.9, 0.6, 0.368, 0.819, 1.0, 0.8,
-        -0.6, 0.6, 0.368, 0.819, 1.0, 0.8,
-        -0.9, 0.4, 0.368, 0.819, 1.0, 0.8,
-        -0.6, 0.4, 0.368, 0.819, 1.0, 0.8,
-    ]);
-
-    draw([
-        0.608,
-        0.102,
-        0.314,
-        0.8
-    ]);
+    requestAnimationFrame(animate);
 }
 
 function createGLContext() {
     return canvas.getContext("webgl") || alert("Failed to create GL context");
 }
 
-function draw(color) {
-    gl.uniform4f(colorLocation, color[0], color[1], color[2], color[3]);
-
+function draw() {
     gl.drawArrays(gl.TRIANGLE_STRIP,
         0,
         4
     );
-
 }
 
 function setupAttributes(){
     aVertexPositionId = gl.getAttribLocation(shaderProgram,"aVertexPosition");
-    vColorLocation = gl.getAttribLocation(shaderProgram,"vColor");
-    colorLocation = gl.getUniformLocation(shaderProgram, "uColor");
+    aColorLocation = gl.getAttribLocation(shaderProgram,"aColor");
+    //colorLocation = gl.getUniformLocation(shaderProgram, "uColor");
 }
 
 function setupBuffer(){
@@ -138,14 +117,55 @@ function initGL() {
     );
 
     gl.vertexAttribPointer(
-        vColorLocation,
+        aColorLocation,
         4,
         gl.FLOAT,
         false,
         24,
-        12
+        8
     );
 
     gl.enableVertexAttribArray(aVertexPositionId);
+    gl.enableVertexAttribArray(aColorLocation);
 
+}
+
+function animate(highResTimestamp) {
+    if(time == undefined){
+        time = new Date().getTime();
+    }else{
+        time = highResTimestamp;
+    }
+
+    if(startTime == null){
+        startTime = time;
+    }
+
+    var progress = time -startTime;
+
+    if(progress >= 10){
+
+        console.log("Redraw");
+        startTime = time;
+        deltaY -= 0.001;
+
+        addBuffer([
+            -0.2 ,   0.4,    0.368,  0.819,  1.0,    1.0,
+            0.3,    0.4,    0.368,  0.819,  1.0,    0.9,
+            -0.2,   -0.4,   0.368,  0.819,  1.0,    0.8,
+            0.3,    -0.4,   0.368,  0.819,  1.0,    0.7,
+        ]);
+
+        draw();
+
+        addBuffer([
+            -0.9,   0.8 + deltaY,    0.368,  0.819,  1.0,    0.7,
+            -0.6,   0.8 + deltaY,    0.368,  0.819,  1.0,    0.8,
+            -0.9,   1.0 + deltaY,    0.368,  0.819,  1.0,    0.9,
+            -0.6,   1.0 + deltaY,    0.368,  0.819,  1.0,    1.0,
+        ]);
+
+        draw();
+    }
+    requestAnimationFrame(animate);
 }
